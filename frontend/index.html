@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carbon-Aware EV Charging System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "IBM Plex Sans", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(8, 145, 178, 0.22), transparent 28%),
+          radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 22%),
+          linear-gradient(135deg, #08111f 0%, #0c1726 35%, #14253a 100%);
+        overflow-x: hidden;
+      }
+
+      h1,
+      h2,
+      h3,
+      .display-font {
+        font-family: "Space Grotesk", sans-serif;
+      }
+
+      .glass {
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(14px);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        box-shadow: 0 24px 80px rgba(5, 12, 24, 0.35);
+        transition:
+          transform 300ms ease,
+          border-color 300ms ease,
+          box-shadow 300ms ease,
+          background 300ms ease;
+      }
+
+      .glass:hover {
+        transform: translateY(-4px);
+        border-color: rgba(82, 220, 255, 0.22);
+        box-shadow: 0 28px 70px rgba(8, 16, 31, 0.42);
+      }
+
+      .cta-button {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+      .cta-button::after {
+        content: "";
+        position: absolute;
+        inset: -120%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 48%);
+        opacity: 0;
+        transform: scale(0.3);
+        transition:
+          opacity 220ms ease,
+          transform 450ms ease;
+        z-index: -1;
+      }
+
+      .cta-button:hover::after,
+      .cta-button:focus-visible::after {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .ambient-grid,
+      .ambient-glow {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .ambient-grid {
+        background-image:
+          linear-gradient(to right, rgba(82, 220, 255, 0.06) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(82, 220, 255, 0.06) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent 92%);
+      }
+
+      .ambient-glow {
+        background:
+          radial-gradient(circle at 18% 20%, rgba(82, 220, 255, 0.12), transparent 26%),
+          radial-gradient(circle at 78% 12%, rgba(245, 158, 11, 0.12), transparent 22%),
+          radial-gradient(circle at 60% 78%, rgba(16, 185, 129, 0.1), transparent 24%);
+        animation: floatGlow 16s ease-in-out infinite alternate;
+      }
+
+      .hero-panel {
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 16% 20%, rgba(82, 220, 255, 0.18), transparent 20%),
+          radial-gradient(circle at 92% 0%, rgba(245, 158, 11, 0.16), transparent 25%),
+          rgba(2, 8, 23, 0.68);
+      }
+
+      .hero-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(to right, rgba(82, 220, 255, 0.08) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(82, 220, 255, 0.08) 1px, transparent 1px);
+        background-size: 88px 88px;
+        opacity: 0.32;
+        animation: driftGrid 18s linear infinite;
+      }
+
+      .hero-particles {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 15% 25%, rgba(255, 255, 255, 0.26) 0 1px, transparent 2px),
+          radial-gradient(circle at 52% 42%, rgba(82, 220, 255, 0.26) 0 1px, transparent 2px),
+          radial-gradient(circle at 80% 65%, rgba(113, 247, 178, 0.22) 0 1px, transparent 2px),
+          radial-gradient(circle at 34% 74%, rgba(245, 158, 11, 0.2) 0 1px, transparent 2px);
+        animation: driftParticles 18s ease-in-out infinite alternate;
+      }
+
+      .hero-stat,
+      .metric-card,
+      .control-card,
+      .impact-card,
+      .energy-card {
+        border-radius: 22px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(3, 10, 24, 0.45);
+        transition:
+          transform 300ms ease,
+          border-color 300ms ease,
+          box-shadow 300ms ease,
+          opacity 300ms ease;
+      }
+
+      .hero-stat:hover,
+      .metric-card:hover,
+      .control-card:hover,
+      .impact-card:hover,
+      .energy-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(82, 220, 255, 0.24);
+        box-shadow: 0 18px 38px rgba(8, 16, 31, 0.28);
+      }
+
+      .chart-wrap {
+        position: relative;
+        min-height: 320px;
+      }
+
+      .blink-dot {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 999px;
+        background: #57f9a6;
+        box-shadow: 0 0 0 0 rgba(87, 249, 166, 0.75);
+        animation: blinkPulse 1.6s infinite;
+      }
+
+      .status-pill-live {
+        border-color: rgba(52, 211, 153, 0.25);
+        background: rgba(16, 185, 129, 0.1);
+        color: #d1fae5;
+      }
+
+      .status-pill-live .blink-dot {
+        background: #57f9a6;
+      }
+
+      .status-pill-cached {
+        border-color: rgba(251, 191, 36, 0.28);
+        background: rgba(245, 158, 11, 0.1);
+        color: #fde68a;
+      }
+
+      .status-pill-cached .blink-dot {
+        background: #fbbf24;
+      }
+
+      .status-pill-offline {
+        border-color: rgba(251, 113, 133, 0.3);
+        background: rgba(244, 63, 94, 0.1);
+        color: #fecdd3;
+      }
+
+      .status-pill-offline .blink-dot {
+        background: #fb7185;
+      }
+
+      .ring-shell {
+        position: relative;
+        height: 158px;
+        width: 158px;
+      }
+
+      .ring-shell svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+
+      .ring-track,
+      .ring-progress {
+        fill: none;
+        stroke-width: 9;
+        stroke-linecap: round;
+      }
+
+      .ring-track {
+        stroke: rgba(148, 163, 184, 0.18);
+      }
+
+      .ring-progress {
+        stroke-dasharray: 339.292;
+        stroke-dashoffset: 339.292;
+        transition: stroke-dashoffset 500ms ease;
+        filter: drop-shadow(0 0 18px rgba(82, 220, 255, 0.35));
+      }
+
+      .ring-center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+
+      .timeline-shell {
+        position: relative;
+        padding: 1.4rem 0 1rem;
+      }
+
+      .timeline-track {
+        position: relative;
+        height: 14px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(148, 163, 184, 0.12), rgba(82, 220, 255, 0.14));
+        overflow: hidden;
+      }
+
+      .timeline-window {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(113, 247, 178, 0.92), rgba(82, 220, 255, 0.86));
+        box-shadow: 0 0 20px rgba(82, 220, 255, 0.35);
+        transition: left 350ms ease, width 350ms ease;
+      }
+
+      .timeline-marker {
+        position: absolute;
+        top: -7px;
+        width: 2px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.76);
+        transition: left 350ms ease;
+      }
+
+      .timeline-now {
+        position: absolute;
+        top: -11px;
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        border: 3px solid rgba(255, 255, 255, 0.76);
+        background: #08111f;
+        box-shadow: 0 0 0 6px rgba(82, 220, 255, 0.16);
+        transform: translateX(-50%);
+      }
+
+      .energy-card.active {
+        border-color: var(--energy-color, rgba(82, 220, 255, 0.45));
+        box-shadow: 0 0 24px rgba(82, 220, 255, 0.22);
+      }
+
+      .energy-card.muted {
+        opacity: 0.35;
+      }
+
+      .energy-progress {
+        position: relative;
+        height: 8px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(148, 163, 184, 0.12);
+      }
+
+      .energy-progress > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        transition: width 300ms ease;
+      }
+
+      .range-track {
+        width: 100%;
+        appearance: none;
+        height: 8px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(82, 220, 255, 0.82) 0%,
+          rgba(82, 220, 255, 0.82) var(--range-fill, 50%),
+          rgba(148, 163, 184, 0.14) var(--range-fill, 50%),
+          rgba(148, 163, 184, 0.14) 100%
+        );
+      }
+
+      .range-track::-webkit-slider-thumb {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(82, 220, 255, 0.16);
+        cursor: pointer;
+      }
+
+      .range-track::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border: none;
+        border-radius: 999px;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(82, 220, 255, 0.16);
+        cursor: pointer;
+      }
+
+      .update-flash {
+        animation: pulseFrame 850ms ease;
+      }
+
+      #dashboardShell[data-loading="true"] .loading-value {
+        color: transparent;
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.65rem;
+        user-select: none;
+      }
+
+      #dashboardShell[data-loading="true"] .loading-value::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(148, 163, 184, 0.08) 0%,
+            rgba(226, 232, 240, 0.18) 50%,
+            rgba(148, 163, 184, 0.08) 100%
+          );
+        background-size: 220% 100%;
+        animation: shimmer 1.5s linear infinite;
+      }
+
+      @keyframes blinkPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(87, 249, 166, 0.72);
+        }
+        70% {
+          box-shadow: 0 0 0 12px rgba(87, 249, 166, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(87, 249, 166, 0);
+        }
+      }
+
+      @keyframes driftGrid {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(-70px, 82px, 0);
+        }
+      }
+
+      @keyframes driftParticles {
+        from {
+          transform: translateY(0);
+        }
+        to {
+          transform: translateY(-10px);
+        }
+      }
+
+      @keyframes floatGlow {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(-18px, 12px, 0);
+        }
+      }
+
+      @keyframes pulseFrame {
+        0% {
+          box-shadow: 0 0 0 0 rgba(82, 220, 255, 0.35);
+        }
+        100% {
+          box-shadow: 0 0 0 20px rgba(82, 220, 255, 0);
+        }
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen text-slate-100">
+    <div class="ambient-grid"></div>
+    <div class="ambient-glow"></div>
+
+    <main id="dashboardShell" data-loading="true" class="relative z-10 mx-auto max-w-[92rem] px-4 py-6 sm:px-6 lg:px-8">
+      <section id="heroPanel" class="hero-panel mb-8 flex flex-col gap-6 rounded-[34px] border border-cyan-400/10 p-8 shadow-2xl shadow-cyan-950/30">
+        <div class="hero-particles"></div>
+        <div class="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div class="mb-3 flex flex-wrap items-center gap-2">
+              <p class="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-medium text-emerald-200">
+                India Grid Carbon Intelligence
+              </p>
+              <span id="liveIndicator" class="status-pill-live inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
+                <span class="blink-dot"></span>
+                Live
+              </span>
+              <span id="carbonBandBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+                Analyzing carbon band
+              </span>
+            </div>
+            <p class="sr-only">
+              India Grid Carbon Intelligence
+            </p>
+            <h1 class="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">Carbon-Aware EV Charging System</h1>
+            <p class="mt-4 max-w-3xl text-base text-slate-300 sm:text-lg">
+              Live grid tracking, carbon estimation, short-term forecasting, and EV charging recommendations based on the cleanest window available.
+            </p>
+            <div class="mt-6 grid gap-4 md:grid-cols-3">
+              <div class="hero-stat p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Grid demand</p>
+                <p id="heroDemandValue" class="loading-value mt-3 display-font text-3xl font-bold text-white">--</p>
+                <p id="heroDemandNote" class="mt-2 text-sm text-slate-400">Waiting for live sync</p>
+              </div>
+              <div class="hero-stat p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Renewable share</p>
+                <p id="heroRenewableValue" class="loading-value mt-3 display-font text-3xl font-bold text-white">--</p>
+                <p id="heroRenewableNote" class="mt-2 text-sm text-slate-400">Solar, wind, and hydro mix</p>
+              </div>
+              <div class="hero-stat p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Feed delay</p>
+                <p id="heroDelayValue" class="loading-value mt-3 display-font text-3xl font-bold text-white">--</p>
+                <p id="heroDelayNote" class="mt-2 text-sm text-slate-400">Compared with your local time</p>
+              </div>
+            </div>
+          </div>
+          <div class="glass rounded-[28px] px-5 py-5 lg:min-w-[28rem]">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-sm uppercase tracking-[0.2em] text-slate-400">Last updated</p>
+                <p id="updatedAt" class="loading-value mt-3 text-2xl font-semibold text-cyan-200">Loading...</p>
+              </div>
+              <button id="refreshNowButton" type="button" class="cta-button rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-300/40 hover:bg-cyan-300/15">
+                Refresh now
+              </button>
+            </div>
+            <p id="statusMessage" class="mt-3 text-sm text-slate-400">Initializing dashboard...</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <span id="dataStatusBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+                Checking data
+              </span>
+              <span id="historyBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+                Building history
+              </span>
+              <span id="refreshCadenceBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+                1-minute polling
+              </span>
+            </div>
+            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+              <div class="metric-card p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Current generation</p>
+                <p id="heroGenerationValue" class="loading-value mt-3 display-font text-2xl font-bold text-white">--</p>
+                <p class="mt-2 text-sm text-slate-400">Total output across tracked sources</p>
+              </div>
+              <div class="metric-card p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Charge now impact</p>
+                <p id="heroChargeNowValue" class="loading-value mt-3 display-font text-2xl font-bold text-white">--</p>
+                <p id="heroChargeNowNote" class="mt-2 text-sm text-slate-400">Estimated CO2 if you charge immediately</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div id="carbonCard" class="glass rounded-[30px] p-6">
+          <div class="flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
+            <div class="flex-1">
+              <p class="text-sm uppercase tracking-[0.25em] text-slate-400">Current carbon intensity</p>
+              <div class="mt-4 flex flex-wrap items-end gap-3">
+                <span id="carbonIntensityValue" class="loading-value display-font text-6xl font-bold text-white">--</span>
+                <span class="mb-2 text-lg font-semibold text-cyan-200">gCO2/kWh</span>
+              </div>
+              <div class="mt-5 flex flex-wrap gap-2">
+                <span id="carbonStatusBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+                  Assessing intensity
+                </span>
+                <span id="carbonTrendBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+                  Trend pending
+                </span>
+              </div>
+
+              <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                <div class="metric-card p-4">
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Demand</p>
+                  <p id="demandValue" class="mt-3 text-xl font-semibold text-slate-100">Demand: -- MW</p>
+                </div>
+                <div class="metric-card p-4">
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Generation</p>
+                  <p id="generationValue" class="mt-3 text-xl font-semibold text-slate-100">Generation: -- MW</p>
+                </div>
+                <div class="metric-card p-4">
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Refresh cadence</p>
+                  <p id="refreshCadence" class="mt-3 text-xl font-semibold text-slate-100">Every minute</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="ring-shell">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <defs>
+                  <linearGradient id="carbonRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#71f7b2"></stop>
+                    <stop offset="55%" stop-color="#52dcff"></stop>
+                    <stop offset="100%" stop-color="#ffcf6b"></stop>
+                  </linearGradient>
+                </defs>
+                <circle class="ring-track" cx="60" cy="60" r="54"></circle>
+                <circle id="carbonRingProgress" class="ring-progress" cx="60" cy="60" r="54" stroke="url(#carbonRingGradient)"></circle>
+              </svg>
+              <div class="ring-center">
+                <span id="carbonRingPercent" class="display-font text-3xl font-bold text-white">0%</span>
+                <span class="text-sm text-slate-400">intensity load</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="chargingCard" class="glass rounded-[30px] p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-sm uppercase tracking-[0.25em] text-slate-400">Best charging window</p>
+              <div class="mt-4 flex items-center gap-3">
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/12 text-2xl shadow-[0_0_24px_rgba(113,247,178,0.16)]">&#9889;</span>
+                <p id="chargingWindow" class="loading-value display-font text-2xl font-semibold text-emerald-200">Calculating...</p>
+              </div>
+            </div>
+            <span id="chargingBadge" class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+              Window analysis
+            </span>
+          </div>
+          <p id="chargingNote" class="mt-4 text-sm text-slate-300">Waiting for forecast data.</p>
+
+          <div class="timeline-shell">
+            <div class="timeline-track">
+              <div id="chargingTimelineWindow" class="timeline-window" style="left: 0%; width: 0%;"></div>
+              <div id="chargingTimelineMarker" class="timeline-marker" style="left: 0%;"></div>
+              <div id="chargingTimelineCurrent" class="timeline-now" style="left: 0%;"></div>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-sm text-slate-400">
+              <span id="timelineStartLabel">Now</span>
+              <span id="timelineEndLabel">+12h</span>
+            </div>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="impact-card p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Expected carbon</p>
+              <p id="expectedCarbon" class="mt-3 text-2xl font-semibold text-white">--</p>
+            </div>
+            <div class="impact-card p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Savings</p>
+              <p id="savingsValue" class="mt-3 text-2xl font-semibold text-emerald-200">--</p>
+            </div>
+            <div class="impact-card p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">CO2 avoided</p>
+              <p id="co2SavedValue" class="mt-3 text-2xl font-semibold text-cyan-200">--</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid gap-6 2xl:grid-cols-[1.08fr_1.12fr]">
+        <div id="generationPanel" class="glass rounded-[30px] p-6">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold">Generation Mix</h2>
+              <p id="generationInsight" class="mt-1 text-sm text-slate-400">Hover a source card to spotlight it in the chart. Click to isolate a source.</p>
+            </div>
+            <span class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+              Source explorer
+            </span>
+          </div>
+          <div class="mt-6 grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+            <div class="chart-wrap">
+              <canvas id="generationChart"></canvas>
+            </div>
+            <div id="energyMetricsGrid" class="grid gap-3 sm:grid-cols-2"></div>
+          </div>
+        </div>
+
+        <div id="trendPanel" class="glass rounded-[30px] p-6">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold">Carbon Trend and Forecast</h2>
+              <p id="trendSubtitle" class="mt-1 text-sm text-slate-400">Recent readings, forecast outlook, and the recommended charging start marker.</p>
+            </div>
+            <span id="trendLiveBadge" class="status-pill-live inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
+              <span class="blink-dot"></span>
+              Live telemetry
+            </span>
+          </div>
+          <div class="chart-wrap mt-6">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid gap-6 xl:grid-cols-[1.22fr_0.78fr]">
+        <div id="controlsPanel" class="glass rounded-[30px] p-6">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold">Charging Scenario</h2>
+              <p class="mt-1 text-sm text-slate-400">Tune the optimizer with live sliders, numeric controls, and instant emissions feedback.</p>
+            </div>
+            <span class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+              Debounced controls
+            </span>
+          </div>
+
+          <form id="chargingForm" class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div class="control-card p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Battery capacity</p>
+                  <p class="mt-1 text-base font-semibold text-slate-100">&#128267; Battery (kWh)</p>
+                </div>
+                <input id="batteryCapacity" class="w-24 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-right text-white outline-none ring-0" type="number" min="20" max="120" step="0.5" value="60" />
+              </div>
+              <input id="batteryCapacitySlider" class="range-track mt-5" type="range" min="20" max="120" step="0.5" value="60" />
+            </div>
+
+            <div class="control-card p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">State of charge</p>
+                  <p class="mt-1 text-base font-semibold text-slate-100">&#128267; Current charge (%)</p>
+                </div>
+                <input id="currentCharge" class="w-24 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-right text-white outline-none ring-0" type="number" min="0" max="100" step="1" value="30" />
+              </div>
+              <input id="currentChargeSlider" class="range-track mt-5" type="range" min="0" max="100" step="1" value="30" />
+            </div>
+
+            <div class="control-card p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Target level</p>
+                  <p class="mt-1 text-base font-semibold text-slate-100">&#127793; Target charge (%)</p>
+                </div>
+                <input id="targetCharge" class="w-24 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-right text-white outline-none ring-0" type="number" min="0" max="100" step="1" value="80" />
+              </div>
+              <input id="targetChargeSlider" class="range-track mt-5" type="range" min="0" max="100" step="1" value="80" />
+            </div>
+
+            <div class="control-card p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Charger speed</p>
+                  <p class="mt-1 text-base font-semibold text-slate-100">&#9889; Charging power (kW)</p>
+                </div>
+                <input id="chargingPower" class="w-24 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-right text-white outline-none ring-0" type="number" min="1" max="22" step="0.1" value="7.2" />
+              </div>
+              <input id="chargingPowerSlider" class="range-track mt-5" type="range" min="1" max="22" step="0.1" value="7.2" />
+            </div>
+
+            <div class="control-card p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Urgency override</p>
+                  <p class="mt-1 text-base font-semibold text-slate-100">&#9888; Urgency (0-1)</p>
+                </div>
+                <input id="urgencyFactor" class="w-24 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-right text-white outline-none ring-0" type="number" min="0" max="1" step="0.05" value="0.25" />
+              </div>
+              <input id="urgencyFactorSlider" class="range-track mt-5" type="range" min="0" max="1" step="0.05" value="0.25" />
+            </div>
+
+            <div class="control-card p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Departure constraint</p>
+                  <p class="mt-1 text-base font-semibold text-slate-100">&#128339; Need by (hours)</p>
+                </div>
+                <input id="deadlineHours" class="w-24 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-right text-white outline-none ring-0" type="number" min="0" max="24" step="0.5" value="" placeholder="Optional" />
+              </div>
+              <input id="deadlineHoursSlider" class="range-track mt-5" type="range" min="0" max="24" step="0.5" value="0" />
+              <p class="mt-3 text-xs text-slate-400">Leave at 0 for a flexible departure window.</p>
+            </div>
+          </form>
+        </div>
+
+        <div id="insightPanel" class="glass rounded-[30px] p-6">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h3 class="text-xl font-semibold">Charging Impact</h3>
+              <p class="mt-1 text-sm text-slate-400">Real-time EV footprint and carbon savings feedback.</p>
+            </div>
+            <span class="inline-flex rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+              Live scenario feedback
+            </span>
+          </div>
+
+          <div class="mt-6 grid gap-3">
+            <div class="impact-card p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Charging now</p>
+              <p id="chargeNowEmissions" class="mt-3 display-font text-4xl font-bold text-rose-200">--</p>
+              <p id="chargeNowNarrative" class="mt-2 text-sm text-slate-400">As per the current grid, we are estimating your immediate charging emissions.</p>
+            </div>
+            <div class="impact-card p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Energy needed</p>
+              <p id="energyNeededValue" class="mt-3 text-2xl font-semibold text-slate-100">--</p>
+              <p id="durationValue" class="mt-2 text-sm text-slate-400">Duration will update as charger power changes.</p>
+            </div>
+            <div class="impact-card p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Carbon saved</p>
+              <p id="recommendedSavingsPulse" class="mt-3 display-font text-3xl font-bold text-emerald-200">--</p>
+              <p class="mt-2 text-sm text-slate-400">Expected benefit of the recommended charging window versus charging immediately.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/frontend/app.js?v=20260404c"></script>
+  </body>
+</html>

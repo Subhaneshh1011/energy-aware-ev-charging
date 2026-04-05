@@ -1,0 +1,62 @@
+[
+  {
+    "updated_on": 1775314412000,
+    "name_of_data": "THERMAL GENERATION",
+    "value_of_data": 129323
+  },
+  {
+    "updated_on": 1775314412000,
+    "name_of_data": "GAS GENERATION",
+    "value_of_data": 1953
+  },
+  {
+    "updated_on": 1775314412000,
+    "name_of_data": "HYDRO GENERATION",
+    "value_of_data": 9062
+  },
+  {
+    "updated_on": 1775314412000,
+    "name_of_data": "NUCLEAR GENERATION",
+    "value_of_data": 6791
+  },
+  {
+    "updated_on": 1775314412000,
+    "name_of_data": "WIND GENERATION",
+    "value_of_data": 4682
+  },
+  {
+    "updated_on": 1775314412000,
+    "name_of_data": "SOLAR GENERATION",
+    "value_of_data": 62963
+  },
+  {
+    "updated_on": 1775314652000,
+    "name_of_data": "THERMAL GENERATION",
+    "value_of_data": 129011
+  },
+  {
+    "updated_on": 1775314652000,
+    "name_of_data": "GAS GENERATION",
+    "value_of_data": 1948
+  },
+  {
+    "updated_on": 1775314652000,
+    "name_of_data": "HYDRO GENERATION",
+    "value_of_data": 9175
+  },
+  {
+    "updated_on": 1775314652000,
+    "name_of_data": "NUCLEAR GENERATION",
+    "value_of_data": 6791
+  },
+  {
+    "updated_on": 1775314652000,
+    "name_of_data": "WIND GENERATION",
+    "value_of_data": 4744
+  },
+  {
+    "updated_on": 1775314652000,
+    "name_of_data": "SOLAR GENERATION",
+    "value_of_data": 62734
+  }
+]
