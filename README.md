@@ -1,4 +1,4 @@
-# Carbon-Aware EV Charging System
+# Energy-Aware EV Charging
 
 FastAPI backend and dashboard for tracking India's live grid mix from NPP, estimating carbon intensity, forecasting cleaner charging windows, and recommending an EV charging schedule.
 
